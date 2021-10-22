@@ -1,0 +1,24 @@
+
+{% block content %}
+<div>
+    <form action="" method="post">
+    <p>My result:</p>
+
+
+    <table border= 1px; style="width:50%">
+        <tr>
+        {% for header in headings %}
+        <th>{{ header }}</th>
+        {% endfor %}
+        </tr>
+        {% for row in result %}
+        <tr>
+            {% for cell in row %}
+            <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+        </form>
+</div>
+{% endblock %}

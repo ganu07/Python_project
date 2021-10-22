@@ -5,9 +5,12 @@
  </head>
    <body>
   <form action = "/validate" method="post">
- <h4> OTP has been sent to the email id. Please check the email for the confirmation.</h4>
+ <h4> OTP has been sent. Please check for the confirmation.</h4>
  Enter OTP(One-time password): <input type="text" name="otp">
  <input type="submit" value="Submit">
+   <br>
+   <br>
+   {{msg}}
  </form>
  </body>
  </html>
