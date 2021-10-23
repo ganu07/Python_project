@@ -5,8 +5,11 @@
      <title>phone number</title>
  </head>
  <body>
+
+  <h4> Hey {{username}} ,  {{msg}}</h4>
+
  <form action = "http://localhost:5000/verify_phone" method = "POST">
- Phone number: <input type="text" name="number">
+ Phone number: <input type="text" name="number" value="{{ phone }}">
  <input type = "submit" value="Submit">
  </form>
  </body>

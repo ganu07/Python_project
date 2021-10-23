@@ -2,9 +2,9 @@ from flask import Flask, render_template,request, session, redirect, url_for
 from flask_mail import *
 from random import *
 from twilio.rest import Client
-import mysql.connector
+from pdf_mail import sendpdf
 from config import *
-import sys
+import pdfkit
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -19,18 +19,23 @@ mail = Mail(app)
 
 otp = randint(000000,999999)
 
+
+
 @app.route("/", methods=["GET","POST"])
 def login():
     msg = ' '
     if request.method == 'POST':
-        global username
+        global username, email1
         username = request.form['username']
         password = request.form['password']
+        email1 = session['email1']
         cursor.execute("select * from student_info where stu_name=%s and stu_pass=%s", (username, password))
         result = cursor.fetchone()
         if result:
             session['login'] = True
             session['username'] = result[1]
+            session['email1'] = result[3]
+            session['phone'] = result[4]
             msg = "Choose your authorization method"
             return render_template("otp.html", username=session['username'], msg = msg)
         else:
@@ -41,7 +46,7 @@ def login():
 @app.route('/email', methods = ["POST"])
 def email():
     msg = "Enter your email address for OTP validation: "
-    return render_template('email.html', username=session['username'], msg=msg)
+    return render_template('email.html', email1 = session['email1'], username=session['username'], msg=msg)
 
 
 @app.route('/verify',methods = ["POST"])
@@ -56,7 +61,8 @@ def verify():
 
 @app.route('/phone', methods = ["POST"])
 def phone():
-    return render_template('phone.html')
+    msg = "Enter your phone number for OTP validation: "
+    return render_template('phone.html', phone = session['phone'], username=session['username'], msg=msg)
 
 
 @app.route('/verify_phone',methods = ["POST"])
@@ -83,9 +89,26 @@ def validate():
                   "student_result.result from student_info inner join " \
                   "student_result on student_info.stu_id = student_result.stu_id where stu_name=%s", (username,))
             result = cursor.fetchall()
-            return render_template('example.html', headings=headings, result=result)
+            rendered = render_template('example.html', headings=headings, result=result, username=username)
+            pdf = pdfkit.from_string(rendered, False)
+            response = make_response(pdf)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Contecnt-Disposition'] = 'inline; filename=output.pdf'
+            if email != email1:
+                msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email])
+                msg.body = "Your result"
+                msg.attach("result", "application/pdf", pdf)
+                mail.send(msg)
+
+            msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email1])
+            msg.body = "Your result"
+            msg.attach("result", "application/pdf", pdf)
+            mail.send(msg)
+
+            return response
     msg="Invalid OTP"
     return render_template("verify.html", msg=msg)
+
 
 
 if __name__ == '__main__':
