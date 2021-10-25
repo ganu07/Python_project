@@ -1,4 +1,5 @@
 from flask import Flask, render_template,request, session, redirect, url_for
+import requests
 from flask_mail import *
 from random import *
 from twilio.rest import Client
@@ -28,13 +29,13 @@ def login():
         global username, email1
         username = request.form['username']
         password = request.form['password']
-        email1 = session['email1']
+
         cursor.execute("select * from student_info where stu_name=%s and stu_pass=%s", (username, password))
         result = cursor.fetchone()
         if result:
             session['login'] = True
             session['username'] = result[1]
-            session['email1'] = result[3]
+            email1 = result[3]
             session['phone'] = result[4]
             msg = "Choose your authorization method"
             return render_template("otp.html", username=session['username'], msg = msg)
@@ -68,14 +69,28 @@ def phone():
 @app.route('/verify_phone',methods = ["POST"])
 def verify_phone():
     number = request.form['number']
-    account_sid = 'AC6cca1a96dbb79a974b68e98379880d88'
-    auth_token = '68d7e700063bbd625ae00c12523ab95b'
-    client = Client(account_sid, auth_token)
-    body = 'your otp is' + str(otp)
-    session['response'] = str(otp)
-    message = client.messages.create(messaging_service_sid='MG02685050e5546d702d7a126357d64c4a', body=body, to=number)
-    if message.sid :
-        return render_template('verify_phone.html')
+    if number.isdigit() and len(number) == 10:
+        url = "https://www.fast2sms.com/dev/bulk"
+        # account_sid = 'AC6cca1a96dbb79a974b68e98379880d88'
+        # auth_token = '68d7e700063bbd625ae00c12523ab95b'
+        # client = Client(account_sid, auth_token)
+        body = 'your otp for result is : ' + str(otp)
+        session['response'] = str(otp)
+        payload = f"sender_id=FSTSMS&message={body}&language=english&route=p&numbers={number}"
+        # message = client.messages.create(messaging_service_sid='MG02685050e5546d702d7a126357d64c4a',
+        #                                  body=body,
+        #                                  to=number)
+
+        headers = {
+            'authorization': "3uOilP4bhHc7SG512dQtIATao0ErmyZ8wxXeFfWsRvkNUBCVg6n7kU5rjlabEcOiqPd0gGQwYILFJxtz",
+            'Content-Type': "application/x-www-form-urlencoded"
+        }
+        response = requests.request("POST", url, data=payload, headers=headers)
+        if response :
+            return render_template('verify_phone.html')
+    else:
+        msg1 = "Invalid phone number"
+        return render_template("phone.html", msg1=msg1)
 
 
 @app.route('/validate',methods=["POST"])
