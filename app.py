@@ -2,10 +2,9 @@ from flask import Flask, render_template,request, session, redirect, url_for
 import requests
 from flask_mail import *
 from random import *
-from twilio.rest import Client
-from pdf_mail import sendpdf
 from config import *
 import pdfkit
+import re
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -19,7 +18,7 @@ app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
 
 otp = randint(000000,999999)
-
+regex = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
 
 
 @app.route("/", methods=["GET","POST"])
@@ -35,8 +34,9 @@ def login():
         if result:
             session['login'] = True
             session['username'] = result[1]
-            email1 = result[3]
+            session['email1'] = result[3]
             session['phone'] = result[4]
+            email1 = session['email1']
             msg = "Choose your authorization method"
             return render_template("otp.html", username=session['username'], msg = msg)
         else:
@@ -47,34 +47,45 @@ def login():
 @app.route('/email', methods = ["POST"])
 def email():
     msg = "Enter your email address for OTP validation: "
-    return render_template('email.html', email1 = session['email1'], username=session['username'], msg=msg)
+
+    return render_template('email.html', email1=session['email1'], username=session['username'], msg=msg)
 
 
 @app.route('/verify',methods = ["POST"])
 def verify():
-    global email
+    global email, number
     email = request.form["email"]
-    msg = Message('OTP',sender = 'resultdetails364@gmail.com', recipients = [email])
-    msg.body = str(otp)
-    mail.send(msg)
-    return render_template('verify.html')
+    number = 'abcd'
+    if (re.search(regex, email)):
+        msg = Message('TECHLEARN ACADAMY', sender='resultdetails364@gmail.com', recipients=[email])
+        msg.body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
+                   "\nYour OTP for result is: " + str(otp)
+        mail.send(msg)
+
+        return render_template('verify.html')
+    else:
+        alet = "Invalid Email"
+        return render_template('email.html', alet=alet)
 
 
 @app.route('/phone', methods = ["POST"])
 def phone():
     msg = "Enter your phone number for OTP validation: "
-    return render_template('phone.html', phone = session['phone'], username=session['username'], msg=msg)
+    return render_template('phone.html', username=session['username'], msg=msg)
 
 
 @app.route('/verify_phone',methods = ["POST"])
 def verify_phone():
+    global number
     number = request.form['number']
+
     if number.isdigit() and len(number) == 10:
         url = "https://www.fast2sms.com/dev/bulk"
         # account_sid = 'AC6cca1a96dbb79a974b68e98379880d88'
         # auth_token = '68d7e700063bbd625ae00c12523ab95b'
         # client = Client(account_sid, auth_token)
-        body = 'your otp for result is : ' + str(otp)
+        body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
+                   "\nYour OTP for result is: " + str(otp)
         session['response'] = str(otp)
         payload = f"sender_id=FSTSMS&message={body}&language=english&route=p&numbers={number}"
         # message = client.messages.create(messaging_service_sid='MG02685050e5546d702d7a126357d64c4a',
@@ -86,11 +97,11 @@ def verify_phone():
             'Content-Type': "application/x-www-form-urlencoded"
         }
         response = requests.request("POST", url, data=payload, headers=headers)
-        if response :
+        if response:
             return render_template('verify_phone.html')
     else:
-        msg1 = "Invalid phone number"
-        return render_template("phone.html", msg1=msg1)
+        alet = "Invalid phone number! Please try again"
+        return render_template("phone.html", alet=alet, username=session['username'])
 
 
 @app.route('/validate',methods=["POST"])
@@ -109,16 +120,17 @@ def validate():
             response = make_response(pdf)
             response.headers['Content-Type'] = 'application/pdf'
             response.headers['Contecnt-Disposition'] = 'inline; filename=output.pdf'
-            if email != email1:
+            if number.isdigit():
+                msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email1])
+                msg.body = f"Hey {username}, your result is follow:"
+                msg.attach("result", "application/pdf", pdf)
+                mail.send(msg)
+            else:
                 msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email])
-                msg.body = "Your result"
+                msg.body = f"Hey {username}, your result is follow:"
                 msg.attach("result", "application/pdf", pdf)
                 mail.send(msg)
 
-            msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email1])
-            msg.body = "Your result"
-            msg.attach("result", "application/pdf", pdf)
-            mail.send(msg)
 
             return response
     msg="Invalid OTP"
