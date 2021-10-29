@@ -9,7 +9,7 @@
  <h2>OTP Verification </h2><br>
   <h4> Hey {{username}}   {{msg}} {{alet}}</h4><br>
 
- <form action = "http://localhost:5000/verify_phone" method = "POST">
+ <form action = "/verify_phone" method = "POST">
  Phone number: <input type="text" name="number" value="{{ phone }}" required>
  <input type = "submit" value="Submit"><br><br>
 
