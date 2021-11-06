@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>LOGIN </title>
 </head>
 <body>
 <div>
+    <h1><u style="background-color:yellow;">*TECHLEARN ACADAMY*</u></h1><br>
+    <P>Login to see your Result:</P>
     <form action ="{{url_for('login')}}" method = "POST">
-        <label>Username: </label><input type="text" name="username" required> <br><br>
-        <label>Password : </label><input type="password" name="password" required> <br><br><br>
+        <b>Username: </b><input type="text" name="username" required> <br><br>
+        <b>Password : </b><input type="password" name="password" required> <br><br><br>
         <input value = "login" type="submit"><br>
         <br><br>
         <h4>{{msg}}</h4>

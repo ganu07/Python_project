@@ -2,16 +2,21 @@
 {% block content %}
 <div>
     <form action="" method="post">
-        <h1>WELCOME TO TECHLEARN ACADAMY</h1>
+        <center><h2><u style="background-color:yellow;">*TECHLEARN ACADAMY*</u></h2></center>
         <br><br>
 
-        <p>Hi {{ username }}, your result is Below:</p>
+        <p>Hi <u style="color:red;">{{username}}</u>, your result is Below:</p>
 
-    <table border= 1px; style="width:50%">
+    <style>
+        td {
+            border: solid 2px black;
+            }
+    </style>
+    <table style="border: 1px solid ; border-collapse: collapse">
         <tr>
-        {% for header in headings %}
-        <th>{{ header }}</th>
-        {% endfor %}
+            {% for header in headings %}
+            <td><b>{{ header }}</b></td>
+            {% endfor %}
         </tr>
         {% for row in result %}
         <tr>

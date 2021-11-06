@@ -5,12 +5,13 @@
      <title>phone number</title>
  </head>
  <body>
-
- <h2>OTP Verification </h2><br>
-  <h4> Hey {{username}}   {{msg}} {{alet}}</h4><br>
+ <h1>*TECHLEARN ACADAMY*</h1>
+ <h2><u>OTP Verification</u> </h2><br>
+ <h4>Hey <u style="color:red;">{{username}}</u> ,  {{msg}} {{alet}}</h4><br>
 
  <form action = "/verify_phone" method = "POST">
- Phone number: <input type="text" name="number" value="{{ phone }}" required>
+ Phone number: <input type="text" name="number" value="{{ phone }}" required><br><br>
+  Email address: <input type='email' name="email"  value ="{{ email1 }}" required ><br><br>
  <input type = "submit" value="Submit"><br><br>
 
 
