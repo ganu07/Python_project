@@ -1,12 +1,10 @@
-import weasyprint
 from flask import Flask, render_template,request, session, redirect, url_for
 import requests
 from flask_mail import *
 from random import *
 from config import *
+import pdfkit
 import re
-from flask_weasyprint import HTML
-import os
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -28,6 +26,7 @@ user_name = "^[a-z]+[a-z]$"
 @app.route("/", methods=["GET", "POST"])
 def login():
     msg = ' '
+
     if request.method == 'POST':
         global username, email1
         username = request.form['username']
@@ -36,7 +35,6 @@ def login():
             cursor = mydb.cursor()
             cursor.execute("select * from student_info where stu_name=%s and stu_pass=%s", (username, password))
             result = cursor.fetchone()
-            cursor.close()
             if result:
                 session['login'] = True
                 session['stu_id']= result[0]
@@ -87,82 +85,79 @@ def verify():
 
 @app.route('/phone', methods = ["POST"])
 def phone():
-    msg = "Enter your phone number for OTP validation and enter email id to receive Result: "
-    return render_template('phone.html',phone = session['phone'], email1=session['email1'], username=session['username'], msg=msg)
+    msg = "Enter your phone number for OTP validation: "
+    return render_template('phone.html',phone = session['phone'], username=session['username'], msg=msg)
 
 
 @app.route('/verify_phone',methods = ["POST"])
 def verify_phone():
     try:
-        global email, number
-        email = request.form["email"]
+        global number
         number = request.form['number']
-
-        if re.search(regex_phone, number) and re.search(regex_email, email):
-            url = "https://www.fast2sms.com/dev/bulk"
-            body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
-                       "\nYour OTP for result is: " + str(otp)
-            session['response'] = str(otp)
-            payload = f"sender_id=FSTSMS&message={body}&language=english&route=p&numbers={number}"
-            headers = {
-                'authorization': "3uOilP4bhHc7SG512dQtIATao0ErmyZ8wxXeFfWsRvkNUBCVg6n7kU5rjlabEcOiqPd0gGQwYILFJxtz",
-                'Content-Type': "application/x-www-form-urlencoded"
-            }
-            response = requests.request("POST", url, data=payload, headers=headers)
-            if response is not None:
-                return render_template('verify_phone.html')
+        try:
+            if re.search(regex_phone, number):
+                url = "https://www.fast2sms.com/dev/bulk"
+                body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
+                           "\nYour OTP for result is: " + str(otp)
+                session['response'] = str(otp)
+                payload = f"sender_id=FSTSMS&message={body}&language=english&route=p&numbers={number}"
+                headers = {
+                    'authorization': "3uOilP4bhHc7SG512dQtIATao0ErmyZ8wxXeFfWsRvkNUBCVg6n7kU5rjlabEcOiqPd0gGQwYILFJxtz",
+                    'Content-Type': "application/x-www-form-urlencoded"
+                }
+                response = requests.request("POST", url, data=payload, headers=headers)
+                if response is not None:
+                    return render_template('verify_phone.html')
+                else:
+                    return render_template('phone.html', msg="Invalid number")
             else:
-                return render_template('phone.html', msg="Invalid number")
-        else:
-            alet = "Invalid phone number! Please try again"
-            return render_template("phone.html", alet=alet, username=session['username'])
-    except Exception as e:
-        mydb.connect()
+                alet = "Invalid phone number! Please try again"
+                return render_template("phone.html", alet=alet, username=session['username'])
+        except Exception as e:
+            mydb.connect()
+            msg = "something went wrong"
+            return render_template("phone.html", msg=msg)
+
+    except :
         msg = "something went wrong"
         return render_template("phone.html", msg=msg)
 
 
-def html_to_pdf(html):
-    htmldocs = HTML(string=html, base_url=" ")
-    # pdf = htmldocs.write_pdf()
-    # with open("in.pdf", "wb") as f:
-    #     f.write(pdf)
-    # out = PdfFileWriter()
-    # file = PdfFileReader("in.pdf")
-    # num = file.numPages
-    # for i in range(num):
-    #     page = file.getPage(i)
-    #     out.addPage(page)
-    # with open("out.pdf", "wb") as f:
-    #     out.write(f)
-    return htmldocs.write_pdf()
-
-
 @app.route('/validate',methods=["POST"])
 def validate():
-    mydb.connect()
-    user_otp = request.form['otp']
-    if otp == int(user_otp):
-        headings = ("Email", "Python", "Java", "C", "Javascript", "Percent", "Result")
-        cursor = mydb.cursor()
-        cursor.execute("select student_info.stu_email, student_result.python, student_result.java, "
-                       "student_result.c, student_result.javascript, student_result.percent, "
-                       "student_result.result from student_info inner join " 
-                       "student_result on student_info.stu_id = student_result.stu_id where stu_name=%s", (username,))
-        result = cursor.fetchall()
-        cursor.close()
+    try:
+        user_otp = request.form['otp']
+        if user_otp.isdigit():
+            if otp == int(user_otp):
+                headings = ("roll no", "python", "java", "C", "javascript", "percent", "result")
+                cursor = mydb.cursor()
+                cursor.execute("Select * from student_result where stu_id=%s", (session['stu_id'],))
+                result = cursor.fetchall()
+                rendered = render_template('example.html', headings=headings, result=result, username=username)
+                pdf = pdfkit.from_string(rendered, False)
+                with open("in.pdf", "wb") as f:
+                    f.write(pdf)
+                response = make_response(pdf)
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Contecnt-Disposition'] = 'inline; filename=in.pdf'
+                if number.isdigit():
+                    msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email1])
+                    msg.body = f"Hey {username}, your result is follow:"
+                    msg.attach("result", "application/pdf", pdf)
+                    mail.send(msg)
+                else:
+                    msg = Message('result_pdf', sender='resultdetails364@gmail.com', recipients=[email])
+                    msg.body = f"Hey {username}, your result is follow:"
+                    msg.attach("result", "application/pdf", pdf)
+                    mail.send(msg)
+                return response
+        msg="Invalid OTP"
+        return render_template("verify.html", msg=msg)
 
-        html = render_template('example.html', headings=headings, result=result, username=username)
-        msg = Message('Techlearn Acadamy Result', sender='resultdetails364@gmail.com', recipients=[email])
-        pdf = html_to_pdf(html)
-        msg.body = f"Hello {username} , We have attached PDF copy of Result"
-        msg.attach("result_{}".format(username) + '.pdf', 'application/pdf', pdf)
-        mail.send(msg)
-        return "Result has been sent Successfully!!!!"
-
-    msg="Invalid OTP"
-    return render_template("verify.html", msg=msg)
-
+    except:
+        mydb.connect()
+        msg = "something went wrong"
+        return validate()
 
 if __name__ == '__main__':
     app.run(debug = True)
