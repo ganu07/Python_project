@@ -12,20 +12,9 @@ import os
 import smtplib
 
 app = Flask(__name__)
-run_with_ngrok(app)
+# run_with_ngrok(app)
 app.secret_key = "super secret key"
 
-
-# mail_settings = {
-#     "MAIL_SERVER": 'smtp.gmail.com',
-#     "MAIL_PORT": 587,
-#     "MAIL_USE_TLS": False,
-#     "MAIL_USE_SSL": True,
-#     "MAIL_USERNAME": 'resultdetail7@gmail.com',
-#     "MAIL_PASSWORD": 'Ganesh@123'
-# }
-
-# app.config.update(mail_settings)
 app.config["MAIL_SERVER"]= 'smtp.gmail.com'
 app.config["MAIL_PORT"] = 465
 app.config["MAIL_USERNAME"] = 'resultdetail7@gmail.com'
@@ -80,19 +69,23 @@ def email():
 
 @app.route('/verify',methods = ["POST"])
 def verify():
+    try:
+        global email
+        email = request.form["email"]
+        if re.search(regex_email, email):
+            msg = Message('TECHLEARN ACADAMY', sender='resultdetails364@gmail.com', recipients=[email])
+            msg.body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
+                       "\nYour OTP for result is: " + str(otp)
+            mail.send(msg)
 
-    global email
-    email = request.form["email"]
-    if re.search(regex_email, email):
-        msg = Message('TECHLEARN ACADAMY', sender='resultdetails364@gmail.com', recipients=[email])
-        msg.body = f"Greetings from TECHLEARN ACADAMY! \n Hello {username}," \
-                   "\nYour OTP for result is: " + str(otp)
-        mail.send(msg)
-
-        return render_template('verify.html')
-    else:
-        alet = "Invalid Email"
-        return render_template('email.html', alet=alet)
+            return render_template('verify.html')
+        else:
+            alet = "Invalid Email"
+            return render_template('email.html', alet=alet)
+    except Exception:
+        mydb.connect()
+        msg = "something went wrong"
+        return render_template("email.html", msg=msg)
 
 
 @app.route('/phone', methods = ["POST"])
@@ -123,7 +116,7 @@ def verify_phone():
             else:
                 return render_template('phone.html', msg="Invalid number")
         else:
-            alet = "Invalid phone number! Please try again"
+            alet = "Invalid phone number or Email! Please try again"
             return render_template("phone.html", alet=alet, username=session['username'])
     except Exception:
         mydb.connect()
@@ -173,4 +166,4 @@ def validate():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
